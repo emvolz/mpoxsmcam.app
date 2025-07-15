@@ -7,7 +7,7 @@ library( ggplot2 )
 #   simulates with modified state at april 2025 or modified parameters 
 # - ribbon plots, cases 
 # - histograms 
-#   max cases, cumulative cases 
+#   TODO max cases, cumulative cases 
 #' @export
 fopl <- function(cntry, newstatelist = list(), newparmlist = list(),  horizon = 365*3, nsim = 1e3) 
 {
@@ -68,7 +68,7 @@ fopl <- function(cntry, newstatelist = list(), newparmlist = list(),  horizon = 
 	simout = list( s = s, sdf = sdf, fodaxis = fodaxis, fotaxis = fotaxis, d =d )
 	focases = with( simout, do.call( cbind, lapply( split( sdf, sdf$.L1 ) , function(dd) dd$cases )) )
 	focases 
-	fobnds <- apply( focases, MAR = 1, function(x) = quantile(x, c( .5, .025, .975)))
+	fobnds <- apply( focases, MAR = 1, function(x)  quantile(x, c( .5, .025, .975)))
 	
 	fmo <- filter_mean( pf ) 
 	mcases <- fmo[ 'Iagg', ]
@@ -84,6 +84,7 @@ fopl <- function(cntry, newstatelist = list(), newparmlist = list(),  horizon = 
 
 	pl = ggplot(pldf, aes(x = date, y = central, ymin=lb, ymax=ub) ) + geom_path() + geom_ribbon(alpha=.2) +  geom_point(aes(x=date,y=cases)) + theme_classic() + xlab('') + ylab('') 
 
+	# TODO histogram max cases, cumulative cases 
 	list( simout = simout , pldf = pldf 
 	      , plot = pl)
 }

@@ -1,10 +1,10 @@
 library( pomp )
 
 
-dmeas <- pomp::Csnippet( paste( readLines(system.file('inst', 'model','dmeas5.0.c' , package='mpoxsmcam.app' ), collapse = '\n') ) 
-rmeas <- pomp::Csnippet( paste( readLines(system.file('inst', 'model', 'rmeas5.0.c', package='mpoxsmcam.app' ), collapse = '\n') )
-rproc <- pomp::Csnippet( paste( readLines(system.file('inst', 'model','rproc5.0.c',  package='mpoxsmcam.app' ), collapse = '\n') )
-rinit <- pomp::Csnippet( paste( readLines(system.file('inst', 'model','rinit5.0.c',  package='mpoxsmcam.app' ), collapse = '\n') )
+dmeas <- pomp::Csnippet( paste( readLines(system.file( 'model','dmeas5.0.c' , package='mpoxsmcam.app' )), collapse = '\n') ) 
+rmeas <- pomp::Csnippet( paste( readLines(system.file( 'model', 'rmeas5.0.c', package='mpoxsmcam.app' )), collapse = '\n') )
+rproc <- pomp::Csnippet( paste( readLines(system.file( 'model','rproc5.0.c',  package='mpoxsmcam.app' )), collapse = '\n') )
+rinit <- pomp::Csnippet( paste( readLines(system.file( 'model','rinit5.0.c',  package='mpoxsmcam.app' )), collapse = '\n') )
 
 snames <- c("S"
 , "E"
@@ -54,25 +54,19 @@ pnames <- c(
 , "initv" 
 )
 
-globs = pomp::Csnippet( glue::glue("
-static double tfin = {max(d$day)};
-") );
-
 # default params 
 
-a = 0.15 
-.r = 2.0 * 1/4 / ((a+1)/a)
 P0 <- c(  
 	gammae = 1/8
 	, gammai = 1/4 
-	, alpha  = a
+	, alpha  = .15
 	, waningnat = 1/(20*365)
 	, waningvac = 1/(20*365)
 	, turnover  = 1/(40*365)
 	, omega = 1/(2*365)
 	, sigma_foi = 3.0 
 	, N = 260e3
-	, r = .r
+	, r =  2.0 * 1/4 / ((.15+1)/.15)
 	, rdrift = .05 
 	, iota0 = .01 
 	, iota1 = 100 
@@ -85,20 +79,24 @@ P0 <- c(
 	, initv = .20 
 )
 
-M <- pomp::pomp(d
-	, t0 =  -30 
-	, times = 'day' 
-	, globals = globs
-	, rprocess = euler( rproc, delta.t = 0.1 )
-	, rinit = rinit 
-	, dmeasure = dmeas 
-	, rmeasure = rmeas
-	, covar = covariate_table( subset( vd, select=-c(X,date)) , times = 'day')
-	, obsnames = c("cases", "casesbreakthrough", "casesreinf")
-	, accumvars = c("Iagg", "Uagg", "Wagg" ) 
-	, statenames = snames
-	, paramnames = pnames
-	, params = P0
-)
-
+# globs = pomp::Csnippet( glue::glue("
+# static double tfin = {max(d$day)};
+# ") );
+#
+# M <- pomp::pomp(d
+# 	, t0 =  -30 
+# 	, times = 'day' 
+# 	, globals = globs
+# 	, rprocess = euler( rproc, delta.t = 0.1 )
+# 	, rinit = rinit 
+# 	, dmeasure = dmeas 
+# 	, rmeasure = rmeas
+# 	, covar = covariate_table( subset( vd, select=-c(X,date)) , times = 'day')
+# 	, obsnames = c("cases", "casesbreakthrough", "casesreinf")
+# 	, accumvars = c("Iagg", "Uagg", "Wagg" ) 
+# 	, statenames = snames
+# 	, paramnames = pnames
+# 	, params = P0
+# )
+#
 
