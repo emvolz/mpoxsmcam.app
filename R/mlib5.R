@@ -18,6 +18,8 @@ CNTRY <- 'NL'
 #' @export 
 d <- read.csv( system.file( 'd0-odf1.csv' , package = 'mpoxsmcam.app') ) 
 d$cases <- pmax(0, d$cases )
+
+#' @export 
 ds <- lapply( COUNTRIES , function(CNTRY)
 	d[ d$ReportingCountry == CNTRY , ]
 	)
@@ -47,8 +49,9 @@ fits[[BEST]][[ CNTRY ]] <- readRDS(  system.file('fits', glue::glue( './ex50-{BE
 #' @export 
 psumdf <- data.frame(
 	  parameter	= c("gammae"	, "gammai"	, "alpha"	, "waningnat"	, "waningvac"	, "turnover"	, "omega"	, "sigma_foi"	, "N"		, "r"		, "rdrift"	, "iota0"	, "iota1"	, "iota2"	, "iota3"	, "sampf"	, "vaccstrat"	, "ve1"		, "ve"		, "initv")
+	, alias		= c("$\\gamma_e$", "$gammai$"	, "$\\alpha$"	, "$\\omega_{nat}$"	, "$\\omega_{vac}$"	, "$\\mu$"	, "$\\omega$"	, "$\\sigma_{foi}$"	, "$N$"		, "$r$"		, "$\\sigma_{drift}$"	, "$\\iota_0$"	, "$\\iota_1$"	, "$\\iota_2$"	, "$\\iota_3$"	, "$\\rho$"	, "$\\mathrm{vaccstrat}$"	, "$v_1$"		, "$v_2$"		, "$v_{init}$")
 	, default	= c(1/8		, 1/4		, .15		, 1/(20*365)	, 1/(20*365)	, 1/(40*365)	, 1/(2*365)	, 3.0		, 260e3		, 1		, .05		, .01		, 100		, 1		, .05		, .33		, 1		, .36		, .66		, .20)
-	, Estimated	= c(F		, F		, TRUE		, F		, F		, F		, TRUE		, TRUE		, F		, TRUE		, TRUE		, TRUE		, F		, F		, F		, F		, F		, F		, F		, F)
+	, Estimated	= c(FALSE	, FALSE		, TRUE		, FALSE		, FALSE		, FALSE		, TRUE		, TRUE		, FALSE		, TRUE		, TRUE		, TRUE		, FALSE		, FALSE		, FALSE		, FALSE		, FALSE		, FALSE		, FALSE		, FALSE)
 	, NL		= rep(0, 20)
 	, ES		= rep(0, 20)
 	, IE		= rep(0, 20)

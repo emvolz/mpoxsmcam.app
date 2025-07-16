@@ -1,11 +1,16 @@
 library( pomp )
 
 
+#' @export 
 dmeas <- pomp::Csnippet( paste( readLines(system.file( 'model','dmeas5.0.c' , package='mpoxsmcam.app' )), collapse = '\n') ) 
+#' @export 
 rmeas <- pomp::Csnippet( paste( readLines(system.file( 'model', 'rmeas5.0.c', package='mpoxsmcam.app' )), collapse = '\n') )
+#' @export 
 rproc <- pomp::Csnippet( paste( readLines(system.file( 'model','rproc5.0.c',  package='mpoxsmcam.app' )), collapse = '\n') )
+#' @export 
 rinit <- pomp::Csnippet( paste( readLines(system.file( 'model','rinit5.0.c',  package='mpoxsmcam.app' )), collapse = '\n') )
 
+#' @export 
 snames <- c("S"
 , "E"
 , "I"
@@ -31,6 +36,7 @@ snames <- c("S"
 , "logrscale" 
 )
 
+#' @export
 pnames <- c(
 "gammae" 
 , "gammai" 

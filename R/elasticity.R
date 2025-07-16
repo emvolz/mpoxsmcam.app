@@ -7,7 +7,7 @@
 		ps <- mpoxsmcam.app::psumdf$parameter[ mpoxsmcam.app::psumdf$Elasticity ] 
 	for ( cntry in cntrys )
 	{
-		mf <-  mpoxsmcam.app::fits[[BEST]][[cntry]]  
+		mf <- mpoxsmcam.app::fits[[BEST]][[cntry]]  
 		pf <- mpoxsmcam.app::pfs.best[[cntry]]
 		PP <- coef( mf )
 		L <- logLik( pf )
@@ -49,6 +49,39 @@
 	)
 }
 
+#' @export 
+edf <- read.csv( system.file('elasticity0.csv', package = 'mpoxsmcam.app'  ) ) 
+
+#' @export 
+medf0 <- lm( abs(dloglikelihoodd0) ~ parameter + parameter:dX, data = edf )
+
+#' @export 
+medf1 <- lm( abs(dloglikelihoodd1) ~ parameter + parameter:dX, data = edf )
+ 
+
+
+#' @export 
+dlikelihoodtable <- function(dx)
+{
+	# dx = .05
+	epars <- psumdf$parameter[ psumdf$Elasticity]
+
+	pdx <- predict( medf0, newdata = data.frame( dX = dx, parameter = epars ) )
+	pd0 <- predict( medf0, newdata = data.frame( dX = 0, parameter = epars ) )
+	dy = abs( pdx - pd0 ) |> setNames( epars )
+	odf0 <- data.frame( perturbation = dx , parameter = epars, dloglikelihood = dy , direction ='downwards' )
+
+	pdx <- predict( medf1, newdata = data.frame( dX = dx, parameter = epars ) )
+	pd0 <- predict( medf1, newdata = data.frame( dX = 0, parameter = epars ) )
+	dy = abs( pdx - pd0 ) |> setNames( epars )
+	odf1 <- data.frame( perturbation = dx , parameter = epars, dloglikelihood = dy , direction ='upwards' )
+
+	odf <- rbind( odf0, odf1  )
+	odf$alias <- psumdf$alias[ psumdf$Elasticity ]
+	odf$Estimated <- psumdf$alias[ psumdf$Estimated ]
+	odf
+}
+
 if (FALSE)
 {
 
@@ -59,5 +92,13 @@ library(doParallel)
 library( iterators )
 
 o = .compute_elasticities( ps = 'alpha', dxs = .5, Np = 2e3, nrep = 5, ncpu = 8)
+
+}
+
+if (FALSE)
+{
+	library( ggplot2 )
+	ggplot( edf, aes(dX, abs(dloglikelihoodd0)) ) + geom_point() + facet_wrap(~parameter,scales='free_y') 
+	ggplot( edf, aes(dX, abs(dloglikelihoodd1)) ) + geom_point() + facet_wrap(~parameter,scales='free_y') 
 
 }

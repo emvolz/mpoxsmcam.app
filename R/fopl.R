@@ -7,29 +7,31 @@ library( ggplot2 )
 #   simulates with modified state at april 2025 or modified parameters 
 # - ribbon plots, cases 
 # - histograms 
-#   TODO max cases, cumulative cases 
 #' @export
-fopl <- function(cntry, newstatelist = list(), newparmlist = list(),  horizon = 365*3, nsim = 1e3) 
+fopl <- function(cntry, newstatelist = list(), newparmlist = list(),  horizon = 365*3, nsim = 1e3
+		 , logrlookback = 30) 
 {
 	# mf, pf, d,
 	mf <-  fits[[BEST]][[cntry]]  
 	pf <- pfs.best[[cntry]]
 	d <- ds[[cntry]]
 	
+	fmo <- filter_mean( pf )
+
 	# parameters 
 	P <- coef(mf) 
-	## fix r  
-	P['rdrift'] = 0
+	# P[ 'rdrift' ] <- sd( diff( tail(fmo['logrscale',],logrlookback))  ) 
 	for ( pn in names( newparmlist ) ){
 		P[ pn ] <- newparmlist[[ pn ]]
 	}
+	## fix r  
+	P['rdrift'] = 0
 	# get last state
-	fmo <- filter_mean( pf )
 	x1 <- tail(t(fmo),1) |> as.vector() |> setNames(rownames(fmo))
 	# new pomp
 	.rinit <- function(parameters, ... ){
 	    	x2 <- x1 
-	    	x2[ 'logscale'] <- fmo['logrscale', ] |> tail(5) |> median() 
+	    	x2[ 'logrscale'] <- (fmo['logrscale', ] |> tail(logrlookback) |> median() )
 	    	for ( xn in names(newstatelist)){
 	    		x2[ xn ] <- newstatelist[[ xn ]]
 	    	}
@@ -69,13 +71,15 @@ fopl <- function(cntry, newstatelist = list(), newparmlist = list(),  horizon = 
 	focases = with( simout, do.call( cbind, lapply( split( sdf, sdf$.L1 ) , function(dd) dd$cases )) )
 	focases 
 	fobnds <- apply( focases, MAR = 1, function(x)  quantile(x, c( .5, .025, .975)))
+	fomaxes <- apply( focases, MAR = 2, max )
+	fosums <- colSums( focases )
 	
 	fmo <- filter_mean( pf ) 
 	mcases <- fmo[ 'Iagg', ]
 	pldf <- data.frame( 
-		central=c( qbinom( .5, mcases, prob = P['sampf']) ,  fobnds[,1] )
-		, lb = c(qbinom( .025, mcases, prob = P['sampf']), fobnds[, 2] ) 
-		, ub = c(qbinom( .975, mcases, prob = P['sampf']), fobnds[, 3] ) 
+		central=c( qbinom( .5, mcases, prob = P['sampf']) ,  fobnds[1,] )
+		, lb = c(qbinom( .025, mcases, prob = P['sampf']), fobnds[2,] ) 
+		, ub = c(qbinom( .975, mcases, prob = P['sampf']), fobnds[3,] ) 
 		, cases = c( d$cases, d1$cases  )
 		, day = c( d$day, d1$day  )
 		, date = c( d$date, fodaxis )
@@ -84,7 +88,44 @@ fopl <- function(cntry, newstatelist = list(), newparmlist = list(),  horizon = 
 
 	pl = ggplot(pldf, aes(x = date, y = central, ymin=lb, ymax=ub) ) + geom_path() + geom_ribbon(alpha=.2) +  geom_point(aes(x=date,y=cases)) + theme_classic() + xlab('') + ylab('') 
 
-	# TODO histogram max cases, cumulative cases 
+	plmax <- ggplot( data.frame(maxcases = fomaxes) , aes(x=maxcases)) + 
+		geom_histogram(aes(y=after_stat(density)) 
+			,  fill = 'blue1', colour = 'white', alpha  = .5) +
+		geom_density( colour = 'darkblue', linewidth=2) + 
+		labs( x= glue::glue('Forecast max cases ({horizon} days)'), y = 'Density' ) + 
+		theme_classic()
+
+	plsum <- ggplot( data.frame(cumulativecases = fosums) , aes(x=cumulativecases)) + 
+		geom_histogram(aes(y=after_stat(density))
+			, fill = 'blue1', colour = 'white', alpha  = .5) +
+		geom_density( colour = 'darkblue', linewidth=2) + 
+		labs( x= glue::glue('Forecast cumulative cases ({horizon} days)'), y = 'Density' ) + 
+		theme_classic()
+
+
 	list( simout = simout , pldf = pldf 
-	      , plot = pl)
+		, plot = pl
+		, plotmax = plmax 
+		, plotsum = plsum 
+	)
+}
+
+if (FALSE)
+{
+	library( pomp ) 
+	library( glue )
+	library( lubridate ) 
+	library( ggplot2 )
+	library( mpoxsmcam.app )
+
+	o = fopl('NL', newstatelist = list(), newparmlist = list(),  horizon = 365*3, nsim = 1e2) 
+	o = fopl('ES', newstatelist = list(), newparmlist = list(),  horizon = 365*3, nsim = 1e2) 
+	o$plot
+	o$plotmax
+	o$plotsum
+
+	o = fopl('NL', newstatelist = list(m1s=1.0), newparmlist = list(),  horizon = 365*3, nsim = 1e2) 
+	o = fopl('NL', newstatelist = list(m1s=.1), newparmlist = list(),  horizon = 365*3, nsim = 1e2) 
+	o = fopl('NL', newstatelist = list(m1s=.5), newparmlist = list(gammai=1/20),  horizon = 365*3, nsim = 1e2) 
+	o$plot
 }
