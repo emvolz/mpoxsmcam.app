@@ -77,8 +77,8 @@ dlikelihoodtable <- function(dx)
 	odf1 <- data.frame( perturbation = dx , parameter = epars, dloglikelihood = dy , direction ='upwards' )
 
 	odf <- rbind( odf0, odf1  )
-	odf$alias <- psumdf$alias[ psumdf$Elasticity ]
-	odf$Estimated <- psumdf$alias[ psumdf$Estimated ]
+	odf$alias <- rep(psumdf$alias[ psumdf$Elasticity ], 2)
+	odf$Estimated <- rep(psumdf$Estimated[ psumdf$Elasticity ], 2)
 	odf
 }
 
