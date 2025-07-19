@@ -1,8 +1,8 @@
 Package: mpoxsmcam.app
 Type: Package
 Title: App to explore parameter sensitivity and forecasts from the mpox SMCAM model 
-Version: 0.0.1
-Date: 2025-07-14
+Version: 0.1.0
+Date: 2025-07-18
 Author: Erik Volz
 Maintainer: Erik Volz <e.volz@imperial.ac.uk> 
 Description: App to explore parameter sensitivity and forecasts from the mpox SMCAM model 

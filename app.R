@@ -2,16 +2,41 @@ library(shiny)
 library(shinydashboard)
 library(DT)
 library(plotly)
-library(mpoxsmcam.app)
 library(shinyWidgets)
+library(shinyBS)
+library(mpoxsmcam.app)
+
+# Get package version dynamically
+app_version <- as.character(packageVersion("mpoxsmcam.app"))
+
+# Parameter descriptions from the report
+param_descriptions <- list(
+	"gammai" = "Infectious period: Average duration of infectiousness (4 days)",
+	"alpha" = "Risk heterogeneity shape: Controls variation in individual risk behavior. Lower values = more heterogeneous population",
+	"waningnat" = "Natural immunity waning rate: Rate at which immunity from natural infection wanes",
+	"waningvac" = "Vaccine immunity waning rate: Rate at which immunity from vaccination wanes", 
+	"turnover" = "Population turnover rate: Rate of entry/exit of individuals from the population (1/40 years)",
+	"omega" = "Individual risk dynamics rate: Rate at which individuals change their risk behavior over time",
+	"N" = "MSM population size: Total size of the men-who-have-sex-with-men population",
+	"r" = "Initial transmission rate: Baseline transmission rate parameter",
+	"iota0" = "Import rate intercept: Baseline rate of case importation from outside the region",
+	"iota1" = "Import rate memory coefficient: How strongly recent importation history affects current imports",
+	"iota2" = "Import rate decay: Rate at which importation memory decays over time", 
+	"iota3" = "Import rate travel association: Proportion of imports associated with local transmission",
+	"sampf" = "Sampling fraction: Proportion of infections that are detected and reported (33%)",
+	"ve1" = "Vaccine efficacy 1 dose: Protective efficacy of single vaccine dose (36%)",
+	"ve" = "Vaccine efficacy 2 dose: Protective efficacy of two vaccine doses (66%)",
+	"initv" = "Proportion vaccinated and immune <2022: Fraction of population with pre-existing immunity from smallpox vaccination"
+)
 
 # Define UI
 ui <- dashboardPage(
-	dashboardHeader(title = "Mpox SMCAM Explorer")
+	dashboardHeader(title = paste0("Mpox SMCAM Explorer v", app_version))
 	, dashboardSidebar(
 		sidebarMenu(
 			menuItem("Forecasting", tabName = "forecasting", icon = icon("chart-line"))
 			, menuItem("Parameter Sensitivity", tabName = "sensitivity", icon = icon("sliders-h"))
+			, menuItem("About", tabName = "about", icon = icon("info-circle"))
 		)
 	)
 	, dashboardBody(
@@ -20,18 +45,17 @@ ui <- dashboardPage(
 			tabItem(tabName = "forecasting"
 				, fluidRow(
 					box(width = 3, title = "Forecast Settings", status = "primary", solidHeader = TRUE
+						, actionButton("run_forecast", "Run Forecast", class = "btn-primary", style = "width: 100%; margin-bottom: 15px;")
 						, selectInput("country", "Country:"
 							, choices = c("Netherlands" = "NL", "Spain" = "ES", "Ireland" = "IE")
 							, selected = "NL")
 						, sliderInput("horizon", "Forecast Horizon (days):"
-							, min = 30, max = 3650, value = 365, step = 1)
+							, min = 30, max = 3650, value = 3*365, step = 1)
 						, sliderInput("nsim", "Number of Simulations:"
-							, min = 50, max = 5000, value = 1000, step = 50)
+							, min = 50, max = 5000, value = 500, step = 50)
 						, hr()
 						, h4("Parameter Modifications")
 						, uiOutput("parameter_inputs")
-						, br()
-						, actionButton("run_forecast", "Run Forecast", class = "btn-primary")
 					)
 					, box(width = 9, title = "Forecast Results", status = "info", solidHeader = TRUE
 						, tabsetPanel(
@@ -51,7 +75,33 @@ ui <- dashboardPage(
 						, p("This controls the proportional change in parameters for sensitivity analysis.")
 					)
 					, box(width = 9, title = "Parameter Sensitivity", status = "info", solidHeader = TRUE
-						, plotOutput("sensitivity_plot", height = "600px")
+						, plotOutput("sensitivity_plot", height = "1250px")
+					)
+				)
+			)
+			# About tab
+			, tabItem(tabName = "about"
+				, fluidRow(
+					box(width = 12, title = paste0("About the Mpox SMCAM Model v", app_version), status = "primary", solidHeader = TRUE
+						, h3("Model Objectives")
+						, p("The mpox Stochastic Moment Closure Approximation Model (SMCAM) aims to quantify and compare the contribution of different behavioral and immunological factors to the maintenance of mpox transmission in Europe. This analysis focuses on population-level risk dynamics, individual-level risk dynamics, waning immunity, and population turnover as plausible factors which either individually or collectively increase the force of infection and lead to sustained transmission in European MSM populations.")
+						
+						, h3("Model Approach") 
+						, p("We developed a stochastic SEIR model incorporating heterogeneous transmission risk and moment closure approximations. The key feature is that infectiousness is correlated with susceptibility via extreme heterogeneity in risk behavior (e.g. number of sexual partners). The model uses a data-driven approach for estimating risk heterogeneity and focuses on longitudinal changes in risk behavior both at the individual and population level, as well as changes in population immunity.")
+						
+						, h3("Applications")
+						, p("This tool allows users to explore forecasting scenarios and parameter sensitivity for mpox transmission in the Netherlands, Spain, and Ireland. Users can modify epidemiological parameters to understand their impact on transmission dynamics and generate probabilistic forecasts under different assumptions about risk behavior, immunity waning, and importation patterns.")
+						
+						, hr()
+						, h4("Contact Information")
+						, p(strong("Erik Volz"))
+						, p("MRC Centre for Global Infectious Disease Analysis")
+						, p("Imperial College London")
+						, p(a("e.volz@imperial.ac.uk", href = "mailto:e.volz@imperial.ac.uk"))
+						
+						, hr()
+						, p(em(paste0("This application implements the model described in: \"Model-based investigation of factors sustaining mpox transmission in Europe in 2025\" by Erik Volz, Imperial College London.")))
+						, p(em(paste0("App version: ", app_version)))
 					)
 				)
 			)
@@ -105,12 +155,22 @@ server <- function(input, output, session) {
 				label_text <- HTML(paste0("<b>", label_text, "</b>"))
 			}
 			
-			numericInput(
-				inputId = paste0("param_", param_name)
-				, label = label_text
-				, value = default_val
-				, min = 0
-				, step = default_val * 0.01
+			div(
+				numericInput(
+					inputId = paste0("param_", param_name)
+					, label = label_text
+					, value = default_val
+					, min = 0
+					, step = default_val * 0.01
+				)
+				, if (!is.null(param_descriptions[[param_name]])) {
+					bsTooltip(
+						id = paste0("param_", param_name)
+						, title = param_descriptions[[param_name]]
+						, placement = "right"
+						, trigger = "hover"
+					)
+				}
 			)
 		})
 		
@@ -242,7 +302,7 @@ server <- function(input, output, session) {
 			labs(
 				title = paste0("Parameter Sensitivity (", input$dx * 100, "% change)")
 				, x = "Parameter"
-				, y = "Change in Log-Likelihood"
+				, y = "Abs. value change in log-likelihood"
 				, fill = "Direction"
 			) +
 			theme_minimal() +
