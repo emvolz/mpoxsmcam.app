@@ -8,8 +8,11 @@ library( ggplot2 )
 # - ribbon plots, cases 
 # - histograms 
 #' @export
-fopl <- function(cntry, newstatelist = list(), newparmlist = list(),  horizon = 365*3, nsim = 1e3
-		 , logrlookback = 30) 
+fopl <- function(cntry, newstatelist = list(), newparmlist = list()
+		 , horizon = 365*3
+		 , nsim = 1e3
+		 , logrlookback = 30
+		 , ntrajshow = 5) 
 {
 	# mf, pf, d,
 	mf <-  fits[[BEST]][[cntry]]  
@@ -86,7 +89,19 @@ fopl <- function(cntry, newstatelist = list(), newparmlist = list(),  horizon = 
 		, fo = c( rep(FALSE, nrow(d)), rep(TRUE, nrow(d1)))
 	)
 
-	pl = ggplot(pldf, aes(x = date, y = central, ymin=lb, ymax=ub) ) + geom_path() + geom_ribbon(alpha=.2) +  geom_point(aes(x=date,y=cases)) + theme_classic() + xlab('') + ylab('') 
+	pl = ggplot(pldf, aes(x = date, y = central, ymin=lb, ymax=ub) ) + 
+		geom_path() + 
+		geom_ribbon(alpha=.2) + 
+		geom_point(aes(x=date,y=cases)) + 
+		theme_classic() + xlab('') + ylab('') 
+	if ( ntrajshow > 0 )
+	{
+		fos <- focases[, sample.int(ncol(focases),replace=FALSE,size = round(ntrajshow)) ]
+		fosdf <- do.call( rbind, lapply( 1:ncol(fos), function(i){
+			data.frame( replicate = as.character(i) , central = fos[,i] , date = fodaxis, lb = fos[,i], ub = fos[,i], cases  = NA, day = NA, fo = TRUE ) 
+		}))
+		pl <- pl + geom_path( data = fosdf, aes(x = date, y = central, colour = replicate) , linewidth=.5, alpha = 1, lty = 1)
+	}
 
 	plmax <- ggplot( data.frame(maxcases = fomaxes) , aes(x=maxcases)) + 
 		geom_histogram(aes(y=after_stat(density)) 
@@ -112,14 +127,15 @@ fopl <- function(cntry, newstatelist = list(), newparmlist = list(),  horizon = 
 
 if (FALSE)
 {
+
 	library( pomp ) 
 	library( glue )
 	library( lubridate ) 
 	library( ggplot2 )
 	library( mpoxsmcam.app )
 
-	o = fopl('NL', newstatelist = list(), newparmlist = list(),  horizon = 365*3, nsim = 1e2) 
 	o = fopl('ES', newstatelist = list(), newparmlist = list(),  horizon = 365*3, nsim = 1e2) 
+	o = fopl('NL', newstatelist = list(m1s=1), newparmlist = list(),  horizon = 365*3, nsim = 1e2) 
 	o$plot
 	o$plotmax
 	o$plotsum

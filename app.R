@@ -29,9 +29,15 @@ param_descriptions <- list(
 	"initv" = "Proportion vaccinated and immune <2022: Fraction of population with pre-existing immunity from smallpox vaccination"
 )
 
+# Create font URLs
+font_regular <- system.file('ImperialSansDisplay-Regular.ttf', package = 'mpoxsmcam.app')
+font_extralight <- system.file('ImperialSansDisplay-Extralight.ttf', package = 'mpoxsmcam.app')
+font_medium <- system.file('ImperialSansDisplay-Medium.ttf', package = 'mpoxsmcam.app')
+font_bold <- system.file('ImperialSansDisplay-Bold.ttf', package = 'mpoxsmcam.app')
+
 # Define UI
 ui <- dashboardPage(
-	dashboardHeader(title = paste0("Mpox SMCAM Explorer v", app_version))
+	dashboardHeader(title = paste0("mpox SMCAM Explorer v", app_version))
 	, dashboardSidebar(
 		sidebarMenu(
 			menuItem("Forecasting", tabName = "forecasting", icon = icon("chart-line"))
@@ -40,26 +46,174 @@ ui <- dashboardPage(
 		)
 	)
 	, dashboardBody(
-		tabItems(
+		# Custom CSS for Imperial College Mood 1 styling
+		tags$head(
+			tags$style(HTML(paste0("
+				/* Imperial Sans Display Font Face Declarations */
+				@font-face {
+					font-family: 'Imperial Sans Display';
+					src: url('", font_regular, "') format('truetype');
+					font-weight: normal;
+					font-style: normal;
+				}
+				
+				@font-face {
+					font-family: 'Imperial Sans Display';
+					src: url('", font_extralight, "') format('truetype');
+					font-weight: 200;
+					font-style: normal;
+				}
+				
+				@font-face {
+					font-family: 'Imperial Sans Display';
+					src: url('", font_medium, "') format('truetype');
+					font-weight: 500;
+					font-style: normal;
+				}
+				
+				@font-face {
+					font-family: 'Imperial Sans Display';
+					src: url('", font_bold, "') format('truetype');
+					font-weight: bold;
+					font-style: normal;
+				}
+				
+				/* Header styling - Dark blue with pink text */
+				.main-header .navbar {
+					background-color: #003E74 !important;
+				}
+				
+				.main-header .logo {
+					background-color: #003E74 !important;
+					color: #D881B5 !important;
+				}
+				
+				.main-header .logo:hover {
+					background-color: #02137E !important;
+				}
+				
+				/* Sidebar styling - Dark blue with pink text */
+				.main-sidebar {
+					background-color: #003E74 !important;
+				}
+				
+				.sidebar-menu > li > a {
+					color: #D881B5 !important;
+				}
+				
+				.sidebar-menu > li.active > a {
+					background-color: #02137E !important;
+					color: #D881B5 !important;
+				}
+				
+				.sidebar-menu > li:hover > a {
+					background-color: #02137E !important;
+					color: #D881B5 !important;
+				}
+				
+				/* Box headers only - preserve box body backgrounds */
+				.box.box-primary > .box-header {
+					background-color: #003E74 !important;
+					color: #D881B5 !important;
+				}
+				
+				.box.box-info > .box-header {
+					background-color: #003E74 !important;
+					color: #D881B5 !important;
+				}
+				
+				/* Button styling - keep original hover behavior */
+				.btn-primary {
+					background-color: #ED2D3C !important;
+					border-color: #ED2D3C !important;
+					color: white !important;
+				}
+				
+				.btn-primary:hover, .btn-primary:focus, .btn-primary:active {
+					background-color: #02137E !important;
+					border-color: #02137E !important;
+					color: white !important;
+				}
+				
+				/* Preserve default content area for plots */
+				.content-wrapper, .right-side {
+					background-color: #f4f4f4 !important;
+				}
+				
+				/* Tab styling for forecasting/sensitivity tabs */
+				.nav-tabs > li.active > a {
+					background-color: #003E74 !important;
+					color: #D881B5 !important;
+				}
+				
+				.nav-tabs > li > a:hover {
+					background-color: #02137E !important;
+					color: #D881B5 !important;
+				}
+				
+				/* About tab - restore to default styling */
+				#about .box {
+					background-color: white !important;
+					color: #333 !important;
+				}
+				
+				#about h3, #about h4, #about p {
+					color: #333 !important;
+				}
+				
+				#about em {
+					color: #666 !important;
+				}
+				
+				/* Imperial Sans Display Font Applications */
+				body, .content-wrapper {
+					font-family: 'Imperial Sans Display', sans-serif !important;
+					font-weight: 200 !important; /* Extralight for body text */
+				}
+				
+				h1, h2, h3, h4, h5, h6, .box-title, .main-header .logo {
+					font-family: 'Imperial Sans Display', sans-serif !important;
+					font-weight: bold !important; /* Bold for headings */
+				}
+				
+				.btn, .form-control, .sidebar-menu > li > a {
+					font-family: 'Imperial Sans Display', sans-serif !important;
+					font-weight: 500 !important; /* Medium for UI elements */
+				}
+				
+				p, .form-group label, .checkbox label {
+					font-family: 'Imperial Sans Display', sans-serif !important;
+					font-weight: normal !important; /* Regular for labels and paragraphs */
+				}
+			")))
+		)
+		, tabItems(
 			# Forecasting tab
 			tabItem(tabName = "forecasting"
 				, fluidRow(
-					box(width = 3, title = "Forecast Settings", status = "primary", solidHeader = TRUE
-						, actionButton("run_forecast", "Run Forecast", class = "btn-primary", style = "width: 100%; margin-bottom: 15px;")
+					box(width = 3, title = "Settings", status = "primary", solidHeader = TRUE
+						, actionButton("run_forecast", "Run simulations", class = "btn-primary", style = "width: 100%; margin-bottom: 15px;")
 						, selectInput("country", "Country:"
 							, choices = c("Netherlands" = "NL", "Spain" = "ES", "Ireland" = "IE")
 							, selected = "NL")
-						, sliderInput("horizon", "Forecast Horizon (days):"
+						, sliderInput("horizon", "Forecast horizon (days):"
 							, min = 30, max = 3650, value = 3*365, step = 1)
-						, sliderInput("nsim", "Number of Simulations:"
+						, sliderInput("nsim", "Number of simulations:"
 							, min = 50, max = 5000, value = 500, step = 50)
+						, sliderInput("ntrajshow", "Individual trajectories to display:"
+							, min = 0, max = 20, value = 0, step = 1)
 						, hr()
-						, h4("Parameter Modifications")
+						, h4("Parameters")
+						, p("Hover mouse for tooltip")
 						, uiOutput("parameter_inputs")
 					)
 					, box(width = 9, title = "Forecast Results", status = "info", solidHeader = TRUE
 						, tabsetPanel(
-							tabPanel("Time Series", plotOutput("forecast_plot", height = "400px"))
+							tabPanel("Time Series"
+								 , hr()
+								 , h6("Cases over time, fitted and forecast")
+								 , hr()
+								 , plotOutput("forecast_plot", height = "400px"))
 							, tabPanel("Max Cases Distribution", plotOutput("max_cases_plot", height = "400px"))
 							, tabPanel("Cumulative Cases Distribution", plotOutput("cumulative_cases_plot", height = "400px"))
 						)
@@ -73,16 +227,22 @@ ui <- dashboardPage(
 						, sliderInput("dx", "Proportional Change:"
 							, min = 0.01, max = 0.5, value = 0.10, step = 0.01)
 						, p("This controls the proportional change in parameters for sensitivity analysis.")
+						, hr()
+						, h4("Parameter inclusion")
+						, p("Hover mouse for tooltip")
+						, uiOutput("parameter_checkboxes")
 					)
 					, box(width = 9, title = "Parameter Sensitivity", status = "info", solidHeader = TRUE
-						, plotOutput("sensitivity_plot", height = "1250px")
+						, p("Parameters in bold were fitted to surveillance data. Others parameters are based on literature or manual calibration")
+						, hr() 
+						, plotOutput("sensitivity_plot", height = "1450px")
 					)
 				)
 			)
 			# About tab
 			, tabItem(tabName = "about"
 				, fluidRow(
-					box(width = 12, title = paste0("About the Mpox SMCAM Model v", app_version), status = "primary", solidHeader = TRUE
+					box(width = 12, title = paste0("About the mpox SMCAM Model v", app_version), status = "primary", solidHeader = TRUE
 						, h3("Model Objectives")
 						, p("The mpox Stochastic Moment Closure Approximation Model (SMCAM) aims to quantify and compare the contribution of different behavioral and immunological factors to the maintenance of mpox transmission in Europe. This analysis focuses on population-level risk dynamics, individual-level risk dynamics, waning immunity, and population turnover as plausible factors which either individually or collectively increase the force of infection and lead to sustained transmission in European MSM populations.")
 						
@@ -177,6 +337,49 @@ server <- function(input, output, session) {
 		do.call(tagList, param_inputs)
 	})
 	
+	# Generate parameter inclusion checkboxes for sensitivity analysis
+	output$parameter_checkboxes <- renderUI({
+		params_df <- elastic_params()
+		
+		# Create checkboxes for each elastic parameter
+		checkbox_inputs <- lapply(1:nrow(params_df), function(i) {
+			param_name <- params_df$parameter[i]
+			param_alias <- params_df$alias[i]
+			
+			# Convert LaTeX to Unicode/HTML for display
+			label_text <- param_alias
+			label_text <- gsub("\\$", "", label_text)
+			label_text <- gsub("\\\\gamma", "γ", label_text)
+			label_text <- gsub("\\\\alpha", "α", label_text)
+			label_text <- gsub("\\\\omega", "ω", label_text)
+			label_text <- gsub("\\\\mu", "μ", label_text)
+			label_text <- gsub("\\\\sigma", "σ", label_text)
+			label_text <- gsub("\\\\rho", "ρ", label_text)
+			label_text <- gsub("\\\\iota", "ι", label_text)
+			label_text <- gsub("\\\\mathrm\\{([^}]+)\\}", "\\1", label_text)
+			label_text <- gsub("_\\{([^}]+)\\}", "₍\\1₎", label_text)
+			label_text <- gsub("_([a-z0-9])", "₍\\1₎", label_text)
+			
+			div(
+				checkboxInput(
+					inputId = paste0("include_", param_name)
+					, label = label_text
+					, value = TRUE  # Default all checked
+				)
+				, if (!is.null(param_descriptions[[param_name]])) {
+					bsTooltip(
+						id = paste0("include_", param_name)
+						, title = param_descriptions[[param_name]]
+						, placement = "right"
+						, trigger = "hover"
+					)
+				}
+			)
+		})
+		
+		do.call(tagList, checkbox_inputs)
+	})
+	
 	# Reactive values for storing results
 	forecast_results <- reactiveVal(NULL)
 	
@@ -207,6 +410,7 @@ server <- function(input, output, session) {
 				, newparmlist = newparmlist
 				, horizon = input$horizon
 				, nsim = input$nsim
+				, ntrajshow = input$ntrajshow
 			)
 			
 			incProgress(0.7, detail = "Generating plots")
@@ -249,8 +453,22 @@ server <- function(input, output, session) {
 		elastic_params_df <- mpoxsmcam.app::psumdf[mpoxsmcam.app::psumdf$Elasticity == TRUE, ]
 		elastic_params_df <- elastic_params_df[elastic_params_df$parameter != "rdrift", ]
 		
-		# Filter the table for elastic parameters
-		dllik_filtered <- dllik_table[dllik_table$parameter %in% elastic_params_df$parameter, ]
+		# Get selected parameters from checkboxes
+		selected_params <- c()
+		for (param in elastic_params_df$parameter) {
+			checkbox_id <- paste0("include_", param)
+			if (!is.null(input[[checkbox_id]]) && input[[checkbox_id]]) {
+				selected_params <- c(selected_params, param)
+			}
+		}
+		
+		# If no parameters selected, return empty data frame
+		if (length(selected_params) == 0) {
+			return(data.frame())
+		}
+		
+		# Filter the table for selected elastic parameters
+		dllik_filtered <- dllik_table[dllik_table$parameter %in% selected_params, ]
 		
 		# Create a lookup for metadata from psumdf
 		psumdf_lookup <- mpoxsmcam.app::psumdf
@@ -278,11 +496,11 @@ server <- function(input, output, session) {
 		max_dllik <- aggregate(dloglikelihood ~ parameter, data = dllik_filtered, FUN = max)
 		dllik_filtered$max_dllik <- max_dllik$dloglikelihood[match(dllik_filtered$parameter, max_dllik$parameter)]
 		
-		# Order by maximum dloglikelihood
-		dllik_filtered <- dllik_filtered[order(dllik_filtered$max_dllik, decreasing = TRUE), ]
+		# Order by maximum dloglikelihood (ascending so largest effects appear at top after coord_flip)
+		dllik_filtered <- dllik_filtered[order(dllik_filtered$max_dllik, decreasing = FALSE), ]
 		
 		# Create ordered factor for consistent plotting
-		param_order <- unique(dllik_filtered$alias_formatted[order(dllik_filtered$max_dllik, decreasing = TRUE)])
+		param_order <- unique(dllik_filtered$alias_formatted[order(dllik_filtered$max_dllik, decreasing = FALSE)])
 		dllik_filtered$alias_formatted <- factor(dllik_filtered$alias_formatted, levels = param_order)
 		
 		dllik_filtered
@@ -291,7 +509,16 @@ server <- function(input, output, session) {
 	# Render sensitivity plot
 	output$sensitivity_plot <- renderPlot({
 		data <- sensitivity_data()
-		req(nrow(data) > 0)
+		
+		# Handle case where no parameters are selected
+		if (nrow(data) == 0) {
+			# Create an empty plot with message
+			ggplot() + 
+				annotate("text", x = 0.5, y = 0.5, label = "No parameters selected.\nPlease check at least one parameter.", 
+						size = 6, hjust = 0.5, vjust = 0.5) +
+				theme_void() +
+				xlim(0, 1) + ylim(0, 1)
+		} else {
 		
 		# Create the plot
 		p <- ggplot(data, aes(x = alias_formatted, y = dloglikelihood, fill = direction)) +
@@ -300,7 +527,7 @@ server <- function(input, output, session) {
 			scale_fill_manual(values = c("downwards" = "#2166ac", "upwards" = "#762a83"),
 				labels = c("Decrease", "Increase")) +
 			labs(
-				title = paste0("Parameter Sensitivity (", input$dx * 100, "% change)")
+				title = paste0("Likelihood elasticity (", input$dx * 100, "% change)")
 				, x = "Parameter"
 				, y = "Abs. value change in log-likelihood"
 				, fill = "Direction"
@@ -323,6 +550,7 @@ server <- function(input, output, session) {
 		}
 		
 		p
+		}
 	})
 }
 

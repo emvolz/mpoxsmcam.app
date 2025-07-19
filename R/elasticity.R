@@ -51,12 +51,15 @@
 
 #' @export 
 edf <- read.csv( system.file('elasticity0.csv', package = 'mpoxsmcam.app'  ) ) 
+edf$parameter <- as.factor( edf$parameter )
 
 #' @export 
-medf0 <- lm( abs(dloglikelihoodd0) ~ parameter + parameter:dX, data = edf )
+# medf0 <- lm( abs(dloglikelihoodd0) ~ parameter + parameter:dX, data = edf )
+medf0 <- mgcv::gam( abs(dloglikelihoodd0) ~ parameter + s(dX,by=parameter,k=3), data = edf, family = Gamma )
 
 #' @export 
-medf1 <- lm( abs(dloglikelihoodd1) ~ parameter + parameter:dX, data = edf )
+# medf1 <- lm( abs(dloglikelihoodd1) ~ parameter + parameter:dX, data = edf )
+medf1 <- mgcv::gam( abs(dloglikelihoodd1) ~ parameter + s(dX,by=parameter,k=3),  data = edf, family = Gamma )
  
 
 
