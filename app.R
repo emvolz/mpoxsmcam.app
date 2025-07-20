@@ -265,7 +265,7 @@ ui <- dashboardPage(
 							tags$li(strong("Default:"), " Uses fitted parameter values without modification"),
 							tags$li(strong("Higher transmissibility:"), " Increases transmission rate (r) by 10% to explore scenarios with enhanced viral transmission"),
 							tags$li(strong("More importation:"), " Increases importation rate (ι₀) by 3-fold to model higher case importation from other regions"),
-							tags$li(strong("Increase in subclinical infections:"), " Models a scenario with more subclinical disease by reducing infectious period (γᵢ) by 20%, detection rate (ρ) by 20%, and transmission rate (r) by 15%")
+							tags$li(strong("Increase in subclinical infections:"), " Models a scenario with more subclinical disease by increasing the infectious period (γᵢ) by 20%, decreasing the detection rate (ρ) by 20%, and decreasing the transmission rate (r) by 15%")
 						)
 						
 						, hr()
