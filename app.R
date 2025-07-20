@@ -199,15 +199,22 @@ ui <- dashboardPage(
 						, sliderInput("horizon", "Forecast horizon (days):"
 							, min = 30, max = 3650, value = 3*365, step = 1)
 						, sliderInput("nsim", "Number of simulations:"
-							, min = 50, max = 5000, value = 500, step = 50)
+							, min = 50, max = 1500, value = 200, step = 50)
 						, sliderInput("ntrajshow", "Individual trajectories to display:"
 							, min = 0, max = 20, value = 0, step = 1)
 						, hr()
+						, selectInput("scenario", "Scenario:"
+							, choices = setNames(1:length(mpoxsmcam.app::scenarios), sapply(mpoxsmcam.app::scenarios, function(x) x$name))
+							, selected = 1)
+						, p("See About tab for scenario details", style = "font-size: 0.9em; color: #666;")
+						, hr()
 						, h4("Parameters")
 						, p("Hover mouse for tooltip")
+						, p("Refresh app to restore defaults")
+						, uiOutput("validation_errors")
 						, uiOutput("parameter_inputs")
 					)
-					, box(width = 9, title = "Forecast Results", status = "info", solidHeader = TRUE
+					, box(width = 9, title = "Forecasts", status = "info", solidHeader = TRUE
 						, tabsetPanel(
 							tabPanel("Time Series"
 								 , hr()
@@ -252,6 +259,15 @@ ui <- dashboardPage(
 						, h3("Applications")
 						, p("This tool allows users to explore forecasting scenarios and parameter sensitivity for mpox transmission in the Netherlands, Spain, and Ireland. Users can modify epidemiological parameters to understand their impact on transmission dynamics and generate probabilistic forecasts under different assumptions about risk behavior, immunity waning, and importation patterns.")
 						
+						, h3("Scenarios")
+						, p("The following predefined scenarios are available for forecasting:")
+						, tags$ul(
+							tags$li(strong("Default:"), " Uses fitted parameter values without modification"),
+							tags$li(strong("Higher transmissibility:"), " Increases transmission rate (r) by 10% to explore scenarios with enhanced viral transmission"),
+							tags$li(strong("More importation:"), " Increases importation rate (ι₀) by 3-fold to model higher case importation from other regions"),
+							tags$li(strong("Increase in subclinical infections:"), " Models a scenario with more subclinical disease by reducing infectious period (γᵢ) by 20%, detection rate (ρ) by 20%, and transmission rate (r) by 15%")
+						)
+						
 						, hr()
 						, h4("Contact Information")
 						, p(strong("Erik Volz"))
@@ -278,6 +294,11 @@ server <- function(input, output, session) {
 		params[params$parameter != "rdrift", ]
 	})
 	
+	# Store original default values for reset functionality (country-specific)
+	original_defaults <- reactive({
+		mpoxsmcam.app::fits[[mpoxsmcam.app::BEST]][[input$country]] |> coef()
+	})
+	
 	# Get default parameter values for selected country
 	default_params <- reactive({
 		country_fits <- mpoxsmcam.app::fits[[mpoxsmcam.app::BEST]][[input$country]]
@@ -288,6 +309,23 @@ server <- function(input, output, session) {
 	output$parameter_inputs <- renderUI({
 		params_df <- elastic_params()
 		defaults <- default_params()
+		
+		# Apply scenario modifications to defaults for initial values
+		if (!is.null(input$scenario)) {
+			scenario_idx <- as.numeric(input$scenario)
+			if (!is.null(scenario_idx) && scenario_idx > 0 && scenario_idx <= length(mpoxsmcam.app::scenarios)) {
+				scenario <- mpoxsmcam.app::scenarios[[scenario_idx]]
+				if (length(scenario$parameter) > 0) {
+					for (i in 1:length(scenario$parameter)) {
+						param_name <- scenario$parameter[i]
+						factor_val <- scenario$factor[i]
+						if (param_name %in% names(defaults)) {
+							defaults[param_name] <- defaults[param_name] * factor_val
+						}
+					}
+				}
+			}
+		}
 		
 		# Create input controls for each elastic parameter
 		param_inputs <- lapply(1:nrow(params_df), function(i) {
@@ -319,9 +357,9 @@ server <- function(input, output, session) {
 				numericInput(
 					inputId = paste0("param_", param_name)
 					, label = label_text
-					, value = default_val
+					, value = signif(default_val, 3)
 					, min = 0
-					, step = default_val * 0.01
+					, step = signif(default_val * 0.01, 3)
 				)
 				, if (!is.null(param_descriptions[[param_name]])) {
 					bsTooltip(
@@ -383,11 +421,62 @@ server <- function(input, output, session) {
 	# Reactive values for storing results
 	forecast_results <- reactiveVal(NULL)
 	
-	# Run forecast when button is clicked
-	observeEvent(input$run_forecast, {
+	# Parameter validation reactive
+	parameter_validation <- reactive({
+		params_df <- elastic_params()
+		defaults <- original_defaults()
+		errors <- c()
+		
+		for (i in 1:nrow(params_df)) {
+			param_name <- params_df$parameter[i]
+			input_name <- paste0("param_", param_name)
+			if (!is.null(input[[input_name]])) {
+				current_val <- input[[input_name]]
+				
+				# Check if value is valid (numeric and positive)
+				if (is.na(current_val) || !is.numeric(current_val) || current_val <= 0) {
+					errors <- c(errors, paste0("Parameter '", param_name, "' must be a positive number"))
+				} else if (!is.null(defaults[param_name])) {
+					default_val <- defaults[param_name]
+					
+					# Check range validation if we have valid numeric values
+					if (is.numeric(default_val) && !is.na(default_val)) {
+						if (current_val < default_val / 4 || current_val > default_val * 4) {
+							errors <- c(errors, paste0("Parameter '", param_name, "' must be between ", 
+								signif(default_val / 4, 4), " and ", signif(default_val * 4, 4)))
+						}
+					}
+				}
+			}
+		}
+		
+		return(errors)
+	})
+	
+	# Display validation errors
+	output$validation_errors <- renderUI({
+		errors <- parameter_validation()
+		if (length(errors) > 0) {
+			div(
+				style = "margin-top: 10px; padding: 10px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 5px; color: #721c24;",
+				h5("Parameter Validation Errors:", style = "margin-top: 0;"),
+				lapply(errors, function(error) p(error, style = "margin-bottom: 5px;"))
+			)
+		}
+	})
+	
+	# Function to run forecast simulation
+	run_forecast_simulation <- function() {
 		req(input$country)
 		
-		# Collect modified parameters
+		# Check for validation errors first
+		errors <- parameter_validation()
+		if (length(errors) > 0) {
+			# Don't run forecast if there are validation errors (they show in UI)
+			return()
+		}
+		
+		# Collect parameters ONLY from UI text fields (validation already done)
 		params_df <- elastic_params()
 		newparmlist <- list()
 		
@@ -397,6 +486,11 @@ server <- function(input, output, session) {
 			if (!is.null(input[[input_name]])) {
 				newparmlist[[param_name]] <- input[[input_name]]
 			}
+		}
+		
+		# Only proceed if we have parameter values
+		if (length(newparmlist) == 0) {
+			return()
 		}
 		
 		# Show progress
@@ -416,6 +510,23 @@ server <- function(input, output, session) {
 			incProgress(0.7, detail = "Generating plots")
 			forecast_results(results)
 		})
+	}
+	
+	# Auto-run forecast on app startup
+	observe({
+		# Wait for all required inputs to be available
+		req(input$country, input$horizon, input$nsim, input$ntrajshow, input$scenario)
+		
+		# Only run once when app starts (when forecast_results is NULL)
+		if (is.null(forecast_results())) {
+			run_forecast_simulation()
+		}
+	})
+	
+	
+	# Run forecast when button is clicked
+	observeEvent(input$run_forecast, {
+		run_forecast_simulation()
 	})
 	
 	# Render forecast plot

@@ -61,6 +61,27 @@ psumdf <- data.frame(
 	, stringsAsFactors = FALSE
 )
 
+#' @export
+scenarios <- list( 
+	list( name = "Default"
+	     , parameter = c() 
+	     , factor = c()
+	)
+	, list(name="Higher transmissibility"
+		, parameter = c("r")
+		, factor = c( 1.1 )
+	)
+	, list(name="More importation"
+		, parameter = c("iota0")
+		, factor = c( 3.0 )
+	)
+	, list(name="Increase in subclincal infections"
+		, parameter = c("gammai", "sampf", "r")
+		, factor = c( 0.8, 0.8, 0.85 )
+	)
+)
+
+
 .ptoR <- function(P)
 {
 	tryCatch( 
