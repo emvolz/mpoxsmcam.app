@@ -90,9 +90,7 @@ if (FALSE)
 
 library( mpoxsmcam.app )
 library( pomp ) 
-library(foreach)
-library(doParallel)
-library( iterators )
+# Optional parallel processing libraries loaded conditionally in .fmll function
 
 o = .compute_elasticities( ps = 'alpha', dxs = .5, Np = 2e3, nrep = 5, ncpu = 8)
 

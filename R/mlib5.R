@@ -98,13 +98,34 @@ scenarios <- list(
 {
 	if ( is.null( P2 ) )
 		P2 <- coef(mf)
-	cl <- makeCluster(ncpu)
-	registerDoParallel(cl)
-	lls <- foreach(i=1:nrep, .combine=rbind, .packages='pomp') %dopar% {
-		o <- pfilter( mf, params = P2, Np = Np) 
-		logLik( o ) 
-	}
-	stopCluster(cl)
+	
+	# Try parallel processing, fall back to sequential if unavailable
+	tryCatch({
+		if (requireNamespace("doParallel", quietly = TRUE) && requireNamespace("foreach", quietly = TRUE) && ncpu > 1) {
+			library(doParallel)
+			library(foreach)
+			cl <- parallel::makeCluster(ncpu)
+			doParallel::registerDoParallel(cl)
+			lls <- foreach(i=1:nrep, .combine=rbind, .packages='pomp') %dopar% {
+				o <- pfilter( mf, params = P2, Np = Np) 
+				logLik( o ) 
+			}
+			stopCluster(cl)
+		} else {
+			# Sequential fallback
+			lls <- sapply(1:nrep, function(i) {
+				o <- pfilter( mf, params = P2, Np = Np) 
+				logLik( o ) 
+			})
+		}
+	}, error = function(e) {
+		# Sequential fallback on any error
+		lls <- sapply(1:nrep, function(i) {
+			o <- pfilter( mf, params = P2, Np = Np) 
+			logLik( o ) 
+		})
+	})
+	
 	print( sort( lls ))
 	logmeanexp( lls, se = TRUE )
 }
