@@ -1,8 +1,5 @@
 library(shiny)
 library(shinydashboard)
-library(DT)
-library(plotly)
-library(shinyWidgets)
 library(shinyBS)
 library(mpoxsmcam.app)
 
